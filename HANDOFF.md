@@ -16,7 +16,7 @@
 
 ## 3. 已知資訊
 - 網域：`andycheng.men`（託管於 Cloudflare），對外主機名：`shell.andycheng.men`
-- Tunnel 名稱：`webterminal`，ID：`b3794d5d-34aa-4339-8c81-7f6de5dffb9e`（在舊電腦建立）
+- 目前使用的 Tunnel：`webterminal-new`，ID：`a49c136b-d3c2-4471-a39d-8f1a6e5bf2f5`（新電腦建立；舊的 `webterminal`，ID `b3794d5d-…` 已不使用）
 - 手機登入 Email（OTP）：`swps9940902@gmail.com`
 - ttyd 基本認證帳號：`andy`；**密碼不在 Git 中**，放在本機 `secrets\ttyd-password.txt`（被 .gitignore 排除）。新電腦請重新產生。
 - 舊電腦另有一個 tunnel `Company-copilot`（屬於 `copilot-openai-proxy` 專案，與本專案無關，勿動）。
@@ -39,13 +39,15 @@
 - [x] `cloudflared tunnel login`、`tunnel create webterminal`、`tunnel route dns webterminal shell.andycheng.men`
 - [x] ttyd 本機回應 200；cloudflared 4 條連線註冊成功（`/ready` 回 200）
 
-**未完成：**
-- [ ] **Cloudflare Zero Trust 後台的 Access 設定**（使用者尚未做）：
+**新電腦已完成：** 工具安裝、新 tunnel（`webterminal-new`）、DNS 改指新 tunnel、新 ttyd 密碼、Cloudflare Access（One-time PIN + Email policy）、手機實測成功。完整說明見 README.md。
+
+**以下為舊電腦時期的歷史紀錄（已完成）：**
+- [x] **Cloudflare Zero Trust 後台的 Access 設定**：
   1. 確認 One-time PIN 已啟用（Zero Trust → Settings → Authentication）
   2. Access → Applications → Add → Self-hosted，Domain = `shell.andycheng.men`
   3. Policy：Allow，Include → Emails → `swps9940902@gmail.com`
   4. **完成前網址僅有 ttyd 帳密保護，請勿長期對外開放**
-- [ ] 用手機實測完整流程（Email OTP → ttyd 帳密 → PowerShell → 執行 `copilot`）
+- [x] 用手機實測完整流程（Email OTP → ttyd 帳密 → PowerShell → 執行 `copilot`）
 - [ ] （選配）執行 03 註冊登入自動啟動
 
 ## 6. 新電腦重建步驟

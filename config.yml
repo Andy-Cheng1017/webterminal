@@ -8,8 +8,8 @@
 #   3. 綁定 DNS：
 #        C:\Tools\cloudflared.exe tunnel route dns webterminal shell.andycheng.men
 
-tunnel: b3794d5d-34aa-4339-8c81-7f6de5dffb9e
-credentials-file: C:\Users\andygfcheng\.cloudflared\b3794d5d-34aa-4339-8c81-7f6de5dffb9e.json
+tunnel: a49c136b-d3c2-4471-a39d-8f1a6e5bf2f5
+credentials-file: C:\Users\andygfcheng\.cloudflared\a49c136b-d3c2-4471-a39d-8f1a6e5bf2f5.json
 
 # cloudflared 預設走 7844 outbound；若被封鎖，可改用 http2 (走 443)
 protocol: http2

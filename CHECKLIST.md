@@ -1,5 +1,7 @@
 # 手動檢查清單
 
+> 現況與完整說明見 README.md。目前 tunnel 為 `webterminal-new`；密碼改放 `secrets\ttyd-password.txt`，不再編輯 `02` 腳本。以下為首次建置用清單。
+
 ## 本機（使用者權限）
 - [ ] `01-Setup-Environment.ps1` 執行完成，ttyd / cloudflared 版本有顯示
 - [ ] `cloudflared.exe tunnel login`（瀏覽器授權網域）

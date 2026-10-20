@@ -11,8 +11,8 @@
 
 # ===================== 設定區 =====================
 $ToolsDir        = 'C:\Tools'
-$LocalTtydSource = 'C:\Users\andygfcheng\Downloads\ttyd.exe'
-$LocalCfdSource  = 'C:\Users\andygfcheng\copilot-openai-proxy\tools\cloudflared.exe'
+$LocalTtydSource = ''
+$LocalCfdSource  = ''
 # ==================================================
 
 $ErrorActionPreference = 'Stop'

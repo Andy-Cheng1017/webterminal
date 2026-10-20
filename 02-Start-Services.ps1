@@ -55,7 +55,7 @@ try {
 
     # 啟動 cloudflared
     Start-Process -FilePath $cfd -WindowStyle Hidden `
-        -ArgumentList '--config', $ConfigFile, 'tunnel', 'run' `
+        -ArgumentList '--config', "`"$ConfigFile`"", 'tunnel', 'run' `
         -RedirectStandardError (Join-Path $LogDir 'cloudflared.log')
 
     Start-Sleep -Seconds 3
