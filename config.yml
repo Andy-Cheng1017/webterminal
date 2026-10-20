@@ -1,0 +1,21 @@
+# cloudflared 設定檔範本
+# 使用說明：
+#   1. 先執行（使用者層級，不需系統管理員）：
+#        C:\Tools\cloudflared.exe tunnel login
+#        C:\Tools\cloudflared.exe tunnel create webterminal
+#      會得到 Tunnel ID 並產生 C:\Users\andygfcheng\.cloudflared\（Tunnel ID）.json
+#   2. 把 tunnel 與 credentials-file 的 ID 及 hostname 換成你的值（本檔已填好）
+#   3. 綁定 DNS：
+#        C:\Tools\cloudflared.exe tunnel route dns webterminal shell.andycheng.men
+
+tunnel: b3794d5d-34aa-4339-8c81-7f6de5dffb9e
+credentials-file: C:\Users\andygfcheng\.cloudflared\b3794d5d-34aa-4339-8c81-7f6de5dffb9e.json
+
+# cloudflared 預設走 7844 outbound；若被封鎖，可改用 http2 (走 443)
+protocol: http2
+
+ingress:
+  - hostname: shell.andycheng.men
+    service: http://localhost:8080
+  # 最後一條為必要的預設規則
+  - service: http_status:404
