@@ -17,6 +17,11 @@ $TtydPass   = '<CHANGE_ME_STRONG_PASSWORD>'
 $SecretFile = Join-Path $PSScriptRoot 'secrets\ttyd-password.txt'
 if (Test-Path $SecretFile) { $TtydPass = (Get-Content $SecretFile -Raw).Trim() }
 $TtydPort   = 8080
+# SSH 入口（sshd-lite）：密碼與 host key 種子放 secrets\，不進 Git
+$SshdUser     = 'andy'
+$SshdPort     = 2222
+$SshdPassFile = Join-Path $PSScriptRoot 'secrets\sshd-password.txt'
+$SshdSeedFile = Join-Path $PSScriptRoot 'secrets\sshd-keyseed.txt'
 $WorkDir    = $env:USERPROFILE
 $ConfigFile = Join-Path $PSScriptRoot 'config.yml'
 # ==================================================
@@ -40,8 +45,22 @@ try {
     # 優先使用 pwsh（PowerShell 7），不存在則退回 powershell.exe
     $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { 'pwsh.exe' } else { 'powershell.exe' }
 
+    $sshd = Join-Path $ToolsDir 'sshd-lite.exe'
+    $sshdEnabled = Test-Path $sshd
+    if ($sshdEnabled) {
+        New-Item -ItemType Directory -Path (Split-Path $SshdPassFile) -Force | Out-Null
+        $rand = { -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ }) }
+        # 密碼與 host key 種子不存在就自動產生（不進 Git）；種子固定才能讓 host key 重啟後不變
+        if (-not (Test-Path $SshdPassFile)) { [IO.File]::WriteAllText($SshdPassFile, (& $rand)); Write-Host "[新增] 已產生 $SshdPassFile" }
+        if (-not (Test-Path $SshdSeedFile)) { [IO.File]::WriteAllText($SshdSeedFile, (& $rand)); Write-Host "[新增] 已產生 $SshdSeedFile" }
+        $SshdPass = (Get-Content $SshdPassFile -Raw).Trim()
+        $SshdSeed = (Get-Content $SshdSeedFile -Raw).Trim()
+    } else {
+        Write-Warning "找不到 $sshd，略過 SSH 入口（請執行 01 腳本）"
+    }
+
     # 避免重複啟動：先停止由 Tools 目錄啟動的舊程序
-    foreach ($p in 'ttyd', 'cloudflared') {
+    foreach ($p in 'ttyd', 'cloudflared', 'sshd-lite') {
         Get-Process $p -ErrorAction SilentlyContinue |
             Where-Object { $_.Path -like "$ToolsDir*" } |
             ForEach-Object { Stop-Process -Id $_.Id -Force }
@@ -53,13 +72,21 @@ try {
         -ArgumentList '-W', '-w', $WorkDir, '-p', $TtydPort, '-i', '127.0.0.1', '-c', "${TtydUser}:${TtydPass}", $shell `
         -RedirectStandardError (Join-Path $LogDir 'ttyd.log')
 
+    # 啟動 sshd-lite：只聽 127.0.0.1，以目前使用者權限執行 shell
+    if ($sshdEnabled) {
+        Start-Process -FilePath $sshd -WindowStyle Hidden `
+            -ArgumentList '--host', '127.0.0.1', '--port', $SshdPort, '--shell', $shell, '--workdir', "`"$WorkDir`"", '--keyseed', $SshdSeed, "${SshdUser}:${SshdPass}" `
+            -RedirectStandardError (Join-Path $LogDir 'sshd-lite.log')
+    }
+
     # 啟動 cloudflared
     Start-Process -FilePath $cfd -WindowStyle Hidden `
         -ArgumentList '--config', "`"$ConfigFile`"", 'tunnel', 'run' `
         -RedirectStandardError (Join-Path $LogDir 'cloudflared.log')
 
     Start-Sleep -Seconds 3
-    foreach ($p in 'ttyd', 'cloudflared') {
+    foreach ($p in 'ttyd', 'cloudflared', 'sshd-lite') {
+        if ($p -eq 'sshd-lite' -and -not $sshdEnabled) { continue }
         if (Get-Process $p -ErrorAction SilentlyContinue) { Write-Host "[OK] $p 執行中" }
         else { Write-Warning "$p 未在執行，請查看 $LogDir" }
     }

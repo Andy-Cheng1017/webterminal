@@ -62,6 +62,11 @@ function Get-Tool {
             $exe = Get-ChildItem $x -Filter *.exe -Recurse | Select-Object -First 1
             Copy-Item $exe.FullName $dest -Force
             Remove-Item $x -Recurse -Force
+        } elseif ($tmp -like '*.gz') {
+            $in  = [IO.File]::OpenRead($tmp)
+            $gz  = New-Object IO.Compression.GzipStream($in, [IO.Compression.CompressionMode]::Decompress)
+            $out = [IO.File]::Create($dest)
+            try { $gz.CopyTo($out) } finally { $out.Close(); $gz.Close(); $in.Close() }
         } else {
             Copy-Item $tmp $dest -Force   # 單一 exe，直接重新命名
         }
@@ -74,9 +79,10 @@ function Get-Tool {
 
 Get-Tool -Name 'ttyd.exe'        -LocalSource $LocalTtydSource -Repo 'tsl0922/ttyd'          -AssetPattern '^ttyd\.win32\.exe$'
 Get-Tool -Name 'cloudflared.exe' -LocalSource $LocalCfdSource  -Repo 'cloudflare/cloudflared' -AssetPattern '^cloudflared-windows-amd64\.exe$'
+Get-Tool -Name 'sshd-lite.exe'   -LocalSource ''               -Repo 'jpillora/sshd-lite'   -AssetPattern '^sshd-lite_.*_windows_amd64\.gz$'
 
 Write-Host "`n版本檢查："
-foreach ($n in 'ttyd.exe', 'cloudflared.exe') {
+foreach ($n in 'ttyd.exe', 'cloudflared.exe', 'sshd-lite.exe') {
     $p = Join-Path $ToolsDir $n
     if (Test-Path $p) { Write-Host " $n -> $(& $p --version 2>&1 | Select-Object -First 1)" }
     else { Write-Warning " $n 不存在" }

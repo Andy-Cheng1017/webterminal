@@ -17,5 +17,8 @@ protocol: http2
 ingress:
   - hostname: shell.andycheng.men
     service: http://localhost:8080
+  # SSH 入口：sshd-lite 只聽 127.0.0.1:2222（需在 Cloudflare 補 DNS 與 Access，見 README）
+  - hostname: ssh.andycheng.men
+    service: ssh://localhost:2222
   # 最後一條為必要的預設規則
   - service: http_status:404

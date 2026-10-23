@@ -50,6 +50,14 @@
 - [x] 用手機實測完整流程（Email OTP → ttyd 帳密 → PowerShell → 執行 `copilot`）
 - [ ] （選配）執行 03 註冊登入自動啟動
 
+## 5.1 新增：SSH 入口（sshd-lite，雙軌）
+
+因公司 IT 禁止安裝 Windows OpenSSH Server，改用使用者層級的 sshd-lite 提供真正 SSH。細節見 README.md 的「SSH 入口」。
+- `config.yml` 新增 `ssh.andycheng.men` → `ssh://localhost:2222`（`shell.andycheng.men` 與 404 規則不變）。
+- `02` 啟動 sshd-lite（只聽 127.0.0.1:2222）；密碼與 host key 種子自動產生於 `secrets\`。
+- 本機 SSH 登入已實測成功（pwsh 7.6.8）。
+- **待辦**：Cloudflare DNS `ssh.andycheng.men`、Access Application、Termius／手機連線實測（尚未做）。
+
 ## 6. 新電腦重建步驟
 1. Clone 本 repo。安裝 PowerShell 7（`pwsh`）與 Copilot CLI。
 2. 編輯 `01-Setup-Environment.ps1` 的本機來源路徑（或設為空字串走下載），執行它。

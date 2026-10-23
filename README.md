@@ -13,6 +13,19 @@
 
 ## 2. 架構
 
+兩條並行入口，共用同一個 Tunnel：
+
+```
+[A] 網頁終端機
+手機瀏覽器 → Cloudflare Access (OTP) → Tunnel → ttyd(127.0.0.1:8080, Basic Auth) → pwsh
+            hostname: shell.andycheng.men
+
+[B] 真正的 SSH（給 Termius 等 SSH 客戶端）
+SSH 客戶端 → Cloudflare Access → Tunnel → sshd-lite(127.0.0.1:2222, 帳號密碼) → pwsh
+            hostname: ssh.andycheng.men（ingress: ssh://localhost:2222）
+```
+
+入口 A 流程如下：
 ```
 手機瀏覽器
    │ HTTPS (443)
@@ -44,6 +57,7 @@ pwsh（PowerShell 7，起始目錄 %USERPROFILE%）
 | ttyd 帳號 | `andy` |
 | ttyd 密碼 | 在本機 `secrets\ttyd-password.txt`（單行純文字，**不在 Git**） |
 | 本機 ttyd | `http://127.0.0.1:8080` |
+| SSH 入口 | `ssh.andycheng.men` → `sshd-lite` 綁 `127.0.0.1:2222`，帳號 `andy`，密碼在 `secrets\sshd-password.txt`，host key 種子在 `secrets\sshd-keyseed.txt`（首次啟動自動產生，皆不進 Git） |
 | cloudflared 狀態 | `http://127.0.0.1:20241/ready`（看 `readyConnections`） |
 | 工具位置 | `C:\Tools\`（無權限則 `%USERPROFILE%\Tools`，路徑記錄於 `toolsdir.txt`） |
 
@@ -51,8 +65,8 @@ pwsh（PowerShell 7，起始目錄 %USERPROFILE%）
 
 | 檔案 | 用途 |
 |---|---|
-| `01-Setup-Environment.ps1` | 下載 ttyd、cloudflared 到 `C:\Tools\`（已存在則跳過）。可設定 `$LocalTtydSource/$LocalCfdSource` 使用本機現有檔，空字串則從 GitHub 下載 |
-| `02-Start-Services.ps1` | 讀取密碼，先停掉舊程序，再以隱藏視窗啟動 ttyd 與 cloudflared，日誌寫到 `logs\` |
+| `01-Setup-Environment.ps1` | 下載 ttyd、cloudflared、sshd-lite（`.gz` 自動解壓）到 `C:\Tools\`（已存在則跳過）。可設定 `$LocalTtydSource/$LocalCfdSource` 使用本機現有檔，空字串則從 GitHub 下載 |
+| `02-Start-Services.ps1` | 讀取密碼，先停掉舊程序，再以隱藏視窗啟動 ttyd、sshd-lite（若已安裝）與 cloudflared，日誌寫到 `logs\` |
 | `03-Register-StartupTask.ps1` | 選配：註冊登入時自動啟動的排程（Limited 權限）。目前未註冊 |
 | `Start-WebTerminal.bat` / `Stop-WebTerminal.bat` | 雙擊啟動／停止 |
 | `config.yml` | cloudflared 設定：tunnel ID、憑證路徑、`protocol: http2`、ingress 指向 `http://localhost:8080` |
@@ -82,6 +96,27 @@ Get-Content logs\cloudflared.log -Tail 10
 ```
 
 未通過 Access 時，公網網址回應 `401` 或 Access 登入頁都屬正常。
+
+### SSH 入口（sshd-lite）
+
+[sshd-lite](https://github.com/jpillora/sshd-lite) 是純 Go 單一 exe，不需管理員權限、不依賴 Windows OpenSSH Server，shell 以目前登入使用者身分執行。`02` 會以 `--host 127.0.0.1 --port 2222 --shell pwsh.exe --keyseed <種子>` 啟動；種子固定所以 host key 重啟後不變。
+
+**本機驗證**
+```powershell
+netstat -an | findstr 2222          # 應看到 127.0.0.1:2222 LISTENING
+ssh -p 2222 andy@127.0.0.1          # 輸入 secrets\sshd-password.txt 的密碼
+Get-Content logs\sshd-lite.log -Tail 10
+```
+
+**Cloudflare 後台需手動做（只做一次）**
+1. DNS：執行 `C:\Tools\cloudflared.exe tunnel route dns webterminal-new ssh.andycheng.men`（或在 DNS 加 CNAME 指向 `<tunnel ID>.cfargotunnel.com`，Proxied）。
+2. Zero Trust → Access → Applications → Self-hosted，網域 `ssh.andycheng.men`，Policy 沿用 Email OTP（只允許本人）。
+3. 修改 `config.yml` 後需重啟服務（`Stop-` 再 `Start-WebTerminal.bat`）。
+
+**客戶端連線方式**（Cloudflare 的 ssh:// 不是公開的 22 埠，客戶端必須經過 Cloudflare 才連得到）
+- 桌面電腦：`ssh -o ProxyCommand="cloudflared access ssh --hostname ssh.andycheng.men" andy@ssh.andycheng.men`（首次會開瀏覽器過 Access）。
+- 手機 Termius：Termius 本身無法執行 cloudflared，常見做法是手機安裝 **Cloudflare WARP** 並加入 Zero Trust 組織，再配合 Cloudflare 的 private network／Access 設定；較簡單的替代是 Cloudflare Access 的 **browser-rendered SSH**。此部分尚未實測，設定前請先確認你的 Zero Trust 方案功能。
+- 若手機端卡關，仍可用入口 A（網頁終端機）。
 
 ### 更換 ttyd 密碼
 
